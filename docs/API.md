@@ -1,350 +1,290 @@
-# API Documentation
+﻿# API Documentation
+
+All responses are JSON. Success responses include `"success": true`; failures include `"success": false` plus either `error` (string) or `errors` (string array, used by Zod validation failures).
+
+Operational data is partitioned by calendar year. The admin pages filter on a per-session "view year" stored in the `admin_view_year` cookie. The public booking page silently uses whichever year is currently active in the `years` table — customers never see or pick a year. New reservations created via the public route are stamped with the active year server-side.
 
 ## Base URL
+
 ```
 https://v0-christmas-tree-farm-app.vercel.app
 ```
 
 ## Authentication
 
-Admin endpoints require a valid session cookie obtained through the login endpoint.
+Admin endpoints require a valid `admin_session` cookie obtained from `POST /api/admin/login`. The session is a stateless HS256 JWT signed with `AUTH_SECRET`, valid for 8 hours.
 
 ### Login
-**POST** `/api/admin/login`
 
-Login with admin credentials to establish a session.
+**POST** `/api/admin/login`
 
 **Request body:**
 ```json
-{
-  "email": "admin@example.com",
-  "password": "secure-password"
-}
+{ "username": "admin", "password": "secure-password" }
 ```
 
 **Response (200):**
 ```json
-{
-  "success": true,
-  "message": "Bejelentkezés sikeres",
-  "user": {
-    "id": 1,
-    "email": "admin@example.com"
-  }
-}
+{ "success": true }
 ```
-
-**Response (401):**
-```json
-{
-  "success": false,
-  "error": "Hibás email vagy jelszó"
-}
-```
+Sets the `admin_session` cookie (httpOnly, sameSite=strict, secure in production).
 
 **Errors:**
-- `400` - Invalid credentials format
-- `401` - Invalid email or password
-- `403` - Forbidden origin (CSRF protection in production)
+- `400` — Invalid body (missing/empty username or password)
+- `401` — `{ "success": false, "error": "Hibás felhasználónév vagy jelszó" }`
+- `403` — Same-origin check failed (production only)
+
+### Logout
+
+**POST** `/api/admin/logout` — clears the session cookie.
 
 ---
 
-## Reservations
+## Reservations (admin)
 
-### Get All Reservations
+### List reservations
+
 **GET** `/api/admin/reservations`
 
-Retrieve all reservations (admin only).
+Lists reservations for the admin's current view year (resolved from the `admin_view_year` cookie).
 
-**Query Parameters:**
-- `sortBy` (optional): Field to sort by (`name`, `email`, `date`, `status`, `createdAt`)
-- `sortOrder` (optional): `asc` or `desc` (default: `desc`)
+**Query parameters:**
+- `status` (optional) — one of `BOOKED`, `TREE_TAGGED`, `CUT`, `PICKED_UP_PAID`, `NO_SHOW`. Invalid values return `400`.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
+  "year": 2026,
+  "reservations": [
     {
       "id": 1,
+      "year": 2026,
       "name": "John Doe",
-      "email": "john@example.com",
       "phone": "+36201234567",
-      "date": "2024-12-15",
-      "trees": 2,
-      "status": "TREE_TAGGED",
+      "email": "john@example.com",
+      "visitDate": "2024-12-15",
+      "pickupDate": "2024-12-20",
+      "treeCount": 2,
+      "notes": "...",
       "treeNumbers": "12, 13",
+      "status": "TREE_TAGGED",
       "paidTo": "János",
-      "createdAt": "2024-11-01T10:30:00Z",
-      "updatedAt": "2024-11-02T15:45:00Z"
+      "createdAt": "2024-11-01T10:30:00Z"
     }
-  ],
-  "count": 42
+  ]
 }
 ```
 
-**Response (401):**
+### Quick-create reservation (admin)
+
+**POST** `/api/admin/reservations/quick`
+
+Creates a reservation for the currently active public year. Requires a valid admin session.
+Unlike the public create endpoint, this quick-create route does **not** send reservation notification emails.
+
+Only `treeCount` is required in the request body. All other fields are optional:
+
 ```json
 {
-  "success": false,
-  "error": "Unauthorized"
+  "treeCount": 1,
+  "name": "",
+  "phone": "",
+  "email": "",
+  "visitDate": "",
+  "pickupDate": "",
+  "notes": "",
+  "status": "BOOKED",
+  "treeNumbers": "",
+  "paidTo": ""
 }
 ```
 
----
+**Auto-fill behavior when optional fields are empty:**
+- `name` → `Admin foglalas YYYYMMDD-HHMM`
+- `phone` → `"N/A"`
+- `visitDate` → today's local date (`YYYY-MM-DD`)
+- `status` defaults to `BOOKED`
+- if `status` requires tree numbers (`TREE_TAGGED`, `CUT`, `PICKED_UP`, `FREE`) and `treeNumbers` is empty, the API stores `"0"`
 
-### Get Single Reservation
-**GET** `/api/admin/reservations/[id]`
-
-Retrieve a specific reservation by ID.
-
-**Path Parameters:**
-- `id` (required): Reservation ID
+`"0"` is treated as a sentinel meaning "tree number not assigned yet". Multiple reservations may use `"0"`. Conflict checks still apply to real tree numbers.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": {
-    "id": 1,
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+36201234567",
-    "date": "2024-12-15",
-    "trees": 2,
-    "status": "TREE_TAGGED",
-    "treeNumbers": "12, 13",
-    "paidTo": "János",
-    "createdAt": "2024-11-01T10:30:00Z",
-    "updatedAt": "2024-11-02T15:45:00Z"
+  "reservation": {
+    "id": 101,
+    "year": 2026,
+    "name": "Admin foglalas 20261128-1015",
+    "phone": "N/A",
+    "visitDate": "2026-11-28",
+    "treeCount": 1,
+    "status": "BOOKED",
+    "createdAt": "2026-11-28T10:15:30.000Z"
   }
 }
 ```
 
-**Response (404):**
-```json
-{
-  "success": false,
-  "error": "Foglalás nem található"
-}
-```
+**Errors:** `400` validation error, `401` unauthenticated, `403` origin check, `503` if no active year is configured.
 
----
+### Get one reservation
 
-### Update Reservation
+**GET** `/api/admin/reservations/[id]` → `{ "success": true, "reservation": { ... } }`
+
+`404` returns `{ "success": false, "error": "Foglalás nem található" }`.
+
+### Update reservation
+
 **PATCH** `/api/admin/reservations/[id]`
 
-Update a reservation with validation.
+All fields optional; at least one must be present.
 
-**Path Parameters:**
-- `id` (required): Reservation ID
-
-**Request body (partial update):**
 ```json
 {
   "name": "Jane Doe",
-  "email": "jane@example.com",
   "phone": "+36201234567",
-  "date": "2024-12-16",
-  "trees": 3,
+  "email": "jane@example.com",
+  "visitDate": "2024-12-16",
+  "pickupDate": "2024-12-20",
+  "treeCount": 3,
   "status": "PICKED_UP_PAID",
   "treeNumbers": "12, 13, 14",
+  "notes": "...",
   "paidTo": "Sanyi"
 }
 ```
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "Jane Doe",
-    "email": "jane@example.com",
-    "phone": "+36201234567",
-    "date": "2024-12-16",
-    "trees": 3,
-    "status": "PICKED_UP_PAID",
-    "treeNumbers": "12, 13, 14",
-    "paidTo": "Sanyi",
-    "createdAt": "2024-11-01T10:30:00Z",
-    "updatedAt": "2024-11-03T16:20:00Z"
-  }
-}
-```
+**Server-enforced rules** (see `lib/reservations.ts`):
+- `status` ∈ `{TREE_TAGGED, CUT, PICKED_UP_PAID}` requires non-empty `treeNumbers`.
+- `treeNumbers` is a comma-separated list of positive integers; numbers already assigned to other reservations *in the same year* return `400` with the conflicting reservation names. The same number is allowed across different years.
+- `paidTo` must be `"János"` or `"Sanyi"` (or empty/null to clear).
+- Date fields must match `YYYY-MM-DD`.
+- `treeCount` is an integer between 1 and 20.
+- The reservation's `year` is immutable and cannot be changed via PATCH.
 
-**Response (400 - Validation Error):**
-```json
-{
-  "success": false,
-  "error": "A következő fa sorszámok már foglaltak: 12 (Kiss János), 14 (Kovács Mária)"
-}
-```
+**Response (200):** `{ "success": true, "reservation": { ... } }`.
 
-**Validation Rules:**
-- `status: TREE_TAGGED | CUT | PICKED_UP_PAID` requires `treeNumbers`
-- `status: PICKED_UP_PAID` requires both `treeNumbers` and `paidTo`
-- `treeNumbers` must contain unique positive integers (comma-separated)
-- `paidTo` must be "János" or "Sanyi"
-- Tree numbers cannot be already assigned to another reservation
+**Errors:** `400` on validation, `401` unauthenticated, `403` origin check, `404` not found.
 
-**Errors:**
-- `400` - Validation failed
-- `401` - Unauthorized
-- `404` - Reservation not found
+### Delete reservation
+
+**DELETE** `/api/admin/reservations/[id]` → `{ "success": true }` or `404 { error: "Foglalás nem található" }`.
+
+Deleting a reservation that has assigned `tree_numbers` logs a `WARNING` to server logs — those numbers are not reusable elsewhere because uniqueness is enforced in app code, not the DB.
 
 ---
 
-### Delete Reservation
-**DELETE** `/api/admin/reservations/[id]`
+## Reservations (public)
 
-Delete a reservation permanently.
+### Create reservation
 
-**Path Parameters:**
-- `id` (required): Reservation ID
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Foglalás törölve"
-}
-```
-
-**Response (404):**
-```json
-{
-  "success": false,
-  "error": "Foglalás nem található"
-}
-```
-
-**Errors:**
-- `401` - Unauthorized
-- `404` - Reservation not found
-
----
-
-### Create Reservation (Public)
 **POST** `/api/reservations`
 
-Create a new reservation from the public booking form.
-
-**Request body:**
 ```json
 {
   "name": "John Doe",
-  "email": "john@example.com",
   "phone": "+36201234567",
-  "date": "2024-12-15",
-  "trees": 2
+  "email": "john@example.com",
+  "visitDate": "2024-12-15",
+  "pickupDate": "2024-12-20",
+  "treeCount": 2,
+  "notes": "..."
 }
 ```
 
-**Response (201):**
+`email`, `pickupDate`, and `notes` are optional.
+
+**Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "id": 42,
+    "year": 2026,
     "name": "John Doe",
-    "email": "john@example.com",
     "phone": "+36201234567",
-    "date": "2024-12-15",
-    "trees": 2,
-    "status": "PENDING",
-    "createdAt": "2024-11-04T12:00:00Z"
+    "visitDate": "2024-12-15",
+    "treeCount": 2,
+    "status": "BOOKED",
+    "createdAt": "..."
   }
 }
 ```
 
-**Response (400):**
-```json
-{
-  "success": false,
-  "error": "Invalid request body"
-}
-```
+**Errors:** `400 { success: false, errors: [...] }` for validation, including `["Erre a szezonra elfogyott az összes fa."]` if the sum of `treeCount` across the active year's non-`NO_SHOW` reservations plus this request would exceed `settings.maxTreesPerSeason`; `503 { success: false, errors: ["Foglalás jelenleg nem elérhető"] }` if no year is currently marked active in the `years` table; `500 { success: false, errors: ["Szerver hiba. Kérjük, próbáld újra."] }` on server error.
+
+The `year` is stamped server-side from the active year — the request body never contains it.
+
+A side-effect `POST` triggers a Resend email to `RESERVATION_NOTIFY_TO` if all email env vars are set; missing email config logs a warning and the reservation still succeeds.
+
+There is no public `GET /api/reservations` — availability data is computed in the booking page from settings + admin reservation data, not from a public endpoint.
 
 ---
 
-### Get Availability (Public)
-**GET** `/api/reservations`
+## Expenses (admin)
 
-Get reservation counts for all dates to show availability.
+- **GET** `/api/admin/expenses` → `{ success: true, expenses: [ ... ] }`
+- **POST** `/api/admin/expenses` body `{ person, amount, description, date }`. `person` ∈ `{"János", "Sanyi"}`, `amount` > 0, `date` `YYYY-MM-DD`. Returns `{ success: true, expense }`.
+- **DELETE** `/api/admin/expenses/[id]` → `{ success: true }` or `404`.
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "2024-12-15": {
-      "reserved": 15,
-      "available": true
-    },
-    "2024-12-16": {
-      "reserved": 28,
-      "available": true
-    },
-    "2024-12-17": {
-      "reserved": 35,
-      "available": false
-    }
-  }
-}
-```
+## Stats (admin)
+
+**GET** `/api/admin/stats` → `{ success: true, stats: { totalReservations, totalTrees, upcomingWeekend, revenueJanos, revenueSanyi, totalRevenue } }`. Revenue is computed only from `PICKED_UP_PAID` reservations using `settings.price`.
+
+## Settings
+
+- **GET** `/api/admin/settings` (public — no auth) returns the currently active year's settings: `{ success: true, settings: { year, availableDays, maxBookingsPerDay, retrievalDays, pricePerTree }, isSeasonSoldOut: boolean }`. `maxTreesPerSeason` and the raw reserved-tree total are intentionally omitted from this public response — only the computed `isSeasonSoldOut` flag is exposed. Cached `no-store`. Returns `503 { success: false, error: "Foglalás jelenleg nem elérhető" }` if no year is active.
+- **GET** `/api/admin/settings?year=2026` (admin) — returns settings for the specified year (includes `maxTreesPerSeason`). Requires the admin session.
+- **PATCH** `/api/admin/settings` (admin) — partial update of `availableDays`, `maxBookingsPerDay`, `maxTreesPerSeason`, `retrievalDays`, `pricePerTree` for the admin's current view year. The handler upserts: a missing settings row is created on first PATCH for a year. `availableDays` / `retrievalDays` are arrays of `YYYY-MM-DD` strings (max 366).
+
+## Years (admin)
+
+- **GET** `/api/admin/years` → `{ success: true, years: [{ year, isActive, createdAt, reservationCount, expenseCount }, ...] }`. Used by the year-manager dialog.
+- **POST** `/api/admin/years` body `{ year: number }` → `{ success: true, year: { year, isActive, createdAt } }`. Creates the year row plus an initial settings row with values cloned from the most recent prior year (excluding `availableDays`, which always start empty). Returns `400` if the year already exists.
+- **POST** `/api/admin/years/[year]/activate` → `{ success: true }`. Atomically clears any existing active flag and sets it on the requested year.
+- **DELETE** `/api/admin/years/[year]` → `{ success: true }`. Refuses (`400`) when the year is currently active or when any reservation/expense row references it; the error message includes the row counts.
+
+## View year (admin)
+
+- **POST** `/api/admin/view-year` body `{ year: number }` → `{ success: true, year }`. Sets the `admin_view_year` cookie (httpOnly, sameSite=strict, 1-year maxAge). The cookie value is validated against `years` on every read; a stale cookie is ignored. Returns `400` if the year doesn't exist.
 
 ---
 
-## Reservation Status Flow
+## Reservation status flow
 
 ```
-PENDING (initial) 
+BOOKED          (initial — set when public POST creates a reservation)
   ↓
-TREE_TAGGED (admin marks trees)
+TREE_TAGGED     (admin assigns tree numbers)
   ↓
-CUT (admin confirms cut)
+CUT             (admin confirms trees are cut)
   ↓
-PICKED_UP_PAID (customer picked up and paid)
+PICKED_UP_PAID  (customer picked up; paidTo records who took payment)
 ```
 
-**Status Requirements:**
-- `TREE_TAGGED`: Requires `treeNumbers`
-- `CUT`: Requires `treeNumbers`
-- `PICKED_UP_PAID`: Requires `treeNumbers` AND `paidTo`
+`NO_SHOW` is a terminal off-ramp. Statuses `TREE_TAGGED`, `CUT`, and `PICKED_UP_PAID` all require non-empty `treeNumbers`; the API rejects updates that would clear them.
 
 ---
 
-## Error Handling
+## Same-origin check (CSRF protection)
 
-All errors follow this format:
+Mutating routes (POST/PATCH/DELETE) call `enforceSameOrigin`, which compares the `Origin` header to `x-forwarded-host` + `x-forwarded-proto`. This runs **only when `NODE_ENV === "production"`** — local dev and the v0 preview environment skip the check. `403 { error: "Tiltott keres eredet." }` on mismatch.
 
-```json
-{
-  "success": false,
-  "error": "Human-readable error message"
-}
-```
+## Rate limiting
 
-### Common HTTP Status Codes
-- `200` - Success
-- `201` - Created
-- `400` - Bad request (validation error)
-- `401` - Unauthorized (not logged in or invalid session)
-- `403` - Forbidden (CSRF protection or permission denied)
-- `404` - Not found
-- `500` - Server error
+Not implemented.
 
----
+## Reservation Photo Upload (admin)
 
-## Rate Limiting
+- `POST /api/admin/uploads/reservation-photo` (multipart/form-data, field: `photo`)
+- Requires admin auth and same-origin checks on production.
+- Accepted MIME: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`.
+- Max upload size: 10 MB.
+- Success: `{ success: true, photoUrl, photoPublicId }`
 
-Currently no rate limiting is enforced. Consider adding rate limiting for production deployments.
+photoUrl and photoPublicId can be sent to:
+- `POST /api/admin/reservations/quick`
+- `PATCH /api/admin/reservations/[id]` (with `clearPhoto=true` to remove existing photo)
 
----
 
-## CORS
-
-CORS is enforced in production. The app checks that the request origin matches the host header to prevent CSRF attacks.
-
-In development (`NODE_ENV !== "production"`), CORS checks are disabled for easier testing.

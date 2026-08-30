@@ -28,7 +28,6 @@ const MistBackground: React.FC = () => {
       precision highp float;
       uniform float u_time;
       uniform vec2  u_resolution;
-      uniform vec2  u_mouse;
 
       float hash(vec2 p) {
         p = fract(p * vec2(123.34, 456.21));
@@ -62,10 +61,6 @@ const MistBackground: React.FC = () => {
         vec2 uv = gl_FragCoord.xy / u_resolution.xy;
         uv.x *= u_resolution.x / u_resolution.y;
 
-        vec2 mPos = u_mouse / u_resolution.xy;
-        mPos.x *= u_resolution.x / u_resolution.y;
-        float dist = distance(uv, mPos);
-
         vec2 q;
         q.x = fbm(uv + 0.07 * u_time);
         q.y = fbm(uv + vec2(1.0, 1.0));
@@ -85,10 +80,6 @@ const MistBackground: React.FC = () => {
         // Ground fog — denser at the bottom
         float heightFade = 1.0 - smoothstep(0.0, 0.65, gl_FragCoord.y / u_resolution.y);
         fogStrength *= (0.35 + 0.65 * heightFade);
-
-        // Mouse gently parts the mist
-        float mouseParting = smoothstep(0.0, 0.25, dist);
-        fogStrength *= mouseParting;
 
         fogStrength = clamp(fogStrength, 0.0, 1.0);
 
@@ -120,29 +111,19 @@ const MistBackground: React.FC = () => {
     gl.enableVertexAttribArray(posLoc);
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-    const timeLoc  = gl.getUniformLocation(program, 'u_time');
-    const resLoc   = gl.getUniformLocation(program, 'u_resolution');
-    const mouseLoc = gl.getUniformLocation(program, 'u_mouse');
-
-    let mouse = { x: 0, y: 0 };
-    const onMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = window.innerHeight - e.clientY;
-    };
-    window.addEventListener('mousemove', onMouseMove);
+    const timeLoc = gl.getUniformLocation(program, 'u_time');
+    const resLoc  = gl.getUniformLocation(program, 'u_resolution');
 
     let raf: number;
     const render = (time: number) => {
-      // Resize only when the window actually changed — same pattern as original
       if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
         canvas.width  = window.innerWidth;
         canvas.height = window.innerHeight;
         gl.viewport(0, 0, canvas.width, canvas.height);
       }
 
-      gl.uniform1f(timeLoc,  time * 0.001);
-      gl.uniform2f(resLoc,   canvas.width, canvas.height);
-      gl.uniform2f(mouseLoc, mouse.x, mouse.y);
+      gl.uniform1f(timeLoc, time * 0.001);
+      gl.uniform2f(resLoc,  canvas.width, canvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
       raf = requestAnimationFrame(render);
@@ -151,7 +132,6 @@ const MistBackground: React.FC = () => {
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('mousemove', onMouseMove);
     };
   }, []);
 

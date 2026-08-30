@@ -59,12 +59,13 @@ export default function AdminDatePicker({ selectedDate, onDateSelect, highlightD
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
 
   return (
-    <Card className="overflow-hidden border-primary/10 bg-white/75 px-0 py-0">
-      <div className="px-5 py-5 sm:px-6">
+    <Card className="overflow-hidden border-primary/10 bg-surface/80 px-0 py-0">
+      <div className="px-3 py-3 sm:px-5 sm:py-5">
         <div className="flex items-center justify-between">
           <button
             type="button"
-            className="rounded-full border border-primary/10 p-2"
+            aria-label="Előző hónap"
+            className="rounded-full border border-primary/10 p-2 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1"
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -76,14 +77,15 @@ export default function AdminDatePicker({ selectedDate, onDateSelect, highlightD
 
           <button
             type="button"
-            className="rounded-full border border-primary/10 p-2"
+            aria-label="Következő hónap"
+            className="rounded-full border border-primary/10 p-2 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1"
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-7 gap-2 text-center text-xs font-semibold text-foreground/48">
+        <div className="mt-5 grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs font-semibold text-foreground/48">
           {dayNames.map((day) => (
             <div key={day}>{day}</div>
           ))}
@@ -91,9 +93,9 @@ export default function AdminDatePicker({ selectedDate, onDateSelect, highlightD
 
         <div className="mt-3 space-y-2">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 gap-2">
+            <div key={weekIndex} className="grid grid-cols-7 gap-1 sm:gap-2">
               {week.map((day, dayIndex) => {
-                if (!day) return <div key={`${weekIndex}-${dayIndex}`} className="h-10" />
+                if (!day) return <div key={`${weekIndex}-${dayIndex}`} className="h-8 sm:h-10" />
 
                 const dateStr = toDateStr(currentMonth.getFullYear(), currentMonth.getMonth(), day)
                 const isSelected = selectedDate === dateStr
@@ -103,14 +105,14 @@ export default function AdminDatePicker({ selectedDate, onDateSelect, highlightD
                   <button
                     key={dateStr}
                     type="button"
-                    disabled={!isHighlighted}
                     onClick={() => onDateSelect(isSelected ? "" : dateStr)}
-                    className={`h-10 rounded-2xl text-sm font-semibold transition ${
+                    title={!isHighlighted && !isSelected ? "Nem elérhető nap (admin felülírás)" : undefined}
+                    className={`h-8 sm:h-10 rounded-2xl text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1 ${
                       isSelected
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground cursor-pointer"
                         : isHighlighted
-                          ? "text-foreground/80 hover:bg-secondary/60"
-                          : "text-foreground/30 cursor-not-allowed"
+                          ? "bg-[color:var(--mint-soft)] text-[color:var(--mint-strong)] hover:brightness-95 cursor-pointer"
+                          : "text-foreground/30 hover:bg-foreground/8 hover:text-foreground/50 cursor-pointer"
                     }`}
                   >
                     {day}

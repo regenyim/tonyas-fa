@@ -11,16 +11,8 @@ export function Marquee3D({ items, className, speed = 20 }: Marquee3DProps) {
   const repeated = [...items, ...items, ...items, ...items]
 
   return (
-    <div
-      className={cn('overflow-hidden py-4', className)}
-      style={{ perspective: '600px' }}
-    >
-      <div
-        style={{
-          transform: 'rotateX(18deg)',
-          transformOrigin: 'center top',
-        }}
-      >
+    <div className={cn('overflow-hidden py-4', className)}>
+      <div>
         <div className='relative flex overflow-hidden'>
           <div
             className='flex gap-12 whitespace-nowrap'
@@ -29,7 +21,7 @@ export function Marquee3D({ items, className, speed = 20 }: Marquee3DProps) {
             {repeated.map((item, i) => (
               <span
                 key={i}
-                className='text-xs font-medium tracking-[0.14em] uppercase text-primary-foreground/80'
+                className='not-italic text-xs font-medium tracking-[0.14em] uppercase text-primary-foreground/80'
               >
                 {item}
               </span>

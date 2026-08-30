@@ -2,7 +2,7 @@
 import { ReservationStatus } from "@/lib/types"
 
 export const facebookUrl = "https://www.facebook.com/karacsonyfak"
-export const phoneNumber = "+36 (30) 123 4567"
+export const phoneNumber = "+36 (20) 345 5136"
 export const mapsEmbedUrl = "https://www.google.com/maps?q=46.898189,16.793188&z=18&output=embed"
 export const mapsUrl = "https://www.google.com/maps/place/46%C2%B053'53.5%22N+16%C2%B047'35.5%22E/@46.8981903,16.7922776,18z/data=!3m1!4b1!4m4!3m3!8m2!3d46.898189!4d16.793188?entry=ttu&g_ep=EgoyMDI2MDMyOS4wIKXMDSoASAFQAw%3D%3D"
 
@@ -44,11 +44,17 @@ export const reservationStatusMeta: Record<
     pillClassName:
       "border-[color:var(--peach-border)] bg-[color:var(--peach-soft)] text-[color:var(--peach-strong)]",
   },
-  [ReservationStatus.PICKED_UP_PAID]: {
-    label: "Átvéve és fizetve",
+  [ReservationStatus.PICKED_UP]: {
+    label: "Átvéve",
     className: "bg-[color:var(--mint-soft)] text-[color:var(--mint-strong)]",
     pillClassName:
       "border-[color:var(--mint-border)] bg-[color:var(--mint-soft)] text-[color:var(--mint-strong)]",
+  },
+  [ReservationStatus.FREE]: {
+    label: "Ingyenes",
+    className: "bg-[color:var(--slate-soft)] text-[color:var(--slate-strong)]",
+    pillClassName:
+      "border-[color:var(--slate-border)] bg-[color:var(--slate-soft)] text-[color:var(--slate-strong)]",
   },
   [ReservationStatus.NO_SHOW]: {
     label: "Nem érkezett meg",

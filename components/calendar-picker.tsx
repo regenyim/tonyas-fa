@@ -64,13 +64,26 @@ export default function CalendarPicker({ selectedDate, onDateSelect, availableDa
   const weeks: (number | null)[][] = []
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
 
+  const sorted = availableDays.slice().sort()
+  const minMonth = sorted.length > 0
+    ? (() => { const [y, m] = sorted[0].split("-"); return new Date(Number(y), Number(m) - 1, 1) })()
+    : null
+  const maxMonth = sorted.length > 0
+    ? (() => { const [y, m] = sorted[sorted.length - 1].split("-"); return new Date(Number(y), Number(m) - 1, 1) })()
+    : null
+
+  const canGoPrev = minMonth === null || currentMonth > minMonth
+  const canGoNext = maxMonth === null || currentMonth < maxMonth
+
   return (
-    <Card className="overflow-hidden border-primary/10 bg-white/80 px-0 py-0">
+    <Card className="overflow-hidden border-primary/10 bg-surface/80 px-0 py-0">
       <div className="px-5 py-5 sm:px-6">
         <div className="flex items-center justify-between">
           <button
             type="button"
-            className="rounded-full border border-primary/10 p-2"
+            aria-label="Előző hónap"
+            className="rounded-full border border-primary/10 p-2 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1"
+            disabled={!canGoPrev}
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -82,7 +95,9 @@ export default function CalendarPicker({ selectedDate, onDateSelect, availableDa
 
           <button
             type="button"
-            className="rounded-full border border-primary/10 p-2"
+            aria-label="Következő hónap"
+            className="rounded-full border border-primary/10 p-2 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1"
+            disabled={!canGoNext}
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
           >
             <ChevronRight className="h-4 w-4" />
@@ -111,12 +126,12 @@ export default function CalendarPicker({ selectedDate, onDateSelect, availableDa
                     type="button"
                     disabled={!isAvailable}
                     onClick={() => onDateSelect(isSelected ? "" : dateStr)}
-                    className={`h-11 rounded-2xl text-sm font-semibold transition ${
+                    className={`h-11 rounded-2xl text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-1 ${
                       isSelected
                         ? "bg-primary text-primary-foreground cursor-pointer"
                         : isAvailable
                           ? "bg-[color:var(--mint-soft)] text-[color:var(--mint-strong)] hover:brightness-95 cursor-pointer"
-                          : "text-foreground/30 cursor-not-allowed"
+                          : "text-foreground/25 cursor-not-allowed"
                     }`}
                   >
                     {day}

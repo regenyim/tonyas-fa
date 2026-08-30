@@ -1,16 +1,18 @@
 "use client"
 
+import type React from "react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
+import { useUnsavedChanges } from "@/contexts/unsaved-changes-context"
 
 const navigationItems = [
-  { label: "Hogyan működik?", href: "/#hogyan-mukodik" },
   { label: "Fenyőink",        href: "/#fenyoink" },
-  { label: "GYIK",            href: "/faq" },
+  { label: "Hogyan működik?", href: "/#hogyan-mukodik" },
+  { label: "GY.I.K.",         href: "/faq" },
   { label: "Elérhetőség",     href: "/contact" },
 ]
 
@@ -54,6 +56,29 @@ export function Navigation() {
   const [isOpen, setIsOpen]     = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeHash, setActiveHash] = useState("")
+  const { isDirty, navigate } = useUnsavedChanges()
+  const menuPanelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleOutsideClick = (e: PointerEvent) => {
+      if (menuPanelRef.current && !menuPanelRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("pointerdown", handleOutsideClick)
+    return () => document.removeEventListener("pointerdown", handleOutsideClick)
+  }, [isOpen])
+
+  const guardedClick = (e: React.MouseEvent, href: string, extra?: () => void) => {
+    if (isDirty) {
+      e.preventDefault()
+      extra?.()
+      navigate(href)
+    } else {
+      extra?.()
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -73,21 +98,21 @@ export function Navigation() {
   const isSolid = !isHome || scrolled
 
   const navLinkClass = isSolid
-    ? "nav-link px-3 py-2 text-sm font-normal text-[#4a4f4a] hover:text-[#3a3a3a] transition-colors"
+    ? "nav-link px-3 py-2 text-sm font-normal text-primary hover:text-foreground transition-colors"
     : "nav-link px-3 py-2 text-sm font-normal text-white/70 hover:text-white transition-colors"
 
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300 ${
         isSolid
-          ? "bg-[#ededed]/95 backdrop-blur-md shadow-sm border-b border-[#bfc3c7]"
+          ? "bg-background/95 backdrop-blur-md shadow-sm border-b border-border"
           : "bg-transparent border-b border-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0 text-base">
+          <Link href="/" className="flex-shrink-0 text-base" onClick={(e) => guardedClick(e, "/")}>
             <LogoWave isSolid={isSolid} />
           </Link>
 
@@ -96,57 +121,92 @@ export function Navigation() {
             {navigationItems.map((item) => {
               const isActive = !item.href.startsWith("/#") && pathname === item.href
               const activeClass = isSolid
-                ? "text-[#6e7f6a]"
+                ? "text-secondary"
                 : "text-white"
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={`${navLinkClass} ${isActive ? `${activeClass} active` : ""}`}
+                  onClick={(e) => guardedClick(e, item.href)}
                 >
                   {item.label}
                 </Link>
               )
             })}
-            <Link href="/booking">
-              <Button
-                size="sm"
-                className={`ml-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:shadow-none ${
-                  isSolid
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_rgba(74,79,74,0.3)]"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_6px_20px_rgba(74,79,74,0.2)]"
-                }`}
+            {isSolid ? (
+              <Link href="/booking" onClick={(e) => guardedClick(e, "/booking")}>
+                <Button
+                  size="sm"
+                  className="ml-4 text-sm font-semibold transition-colors duration-200 bg-primary text-primary-foreground hover:bg-primary/75"
+                >
+                  Időpontfoglalás
+                </Button>
+              </Link>
+            ) : (
+              <Link
+                href="/booking"
+                className={`${navLinkClass} !font-bold`}
+                onClick={(e) => guardedClick(e, "/booking")}
               >
                 Időpontfoglalás
-              </Button>
-            </Link>
-            <Link href="/admin" className={navLinkClass}>
+              </Link>
+            )}
+            <Link href="/admin" className={navLinkClass} onClick={(e) => guardedClick(e, "/admin")}>
               Admin
             </Link>
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className={`md:hidden cursor-pointer p-2 transition-colors duration-300 ${isSolid ? "text-foreground" : "text-white"}`}
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Mobile menu button — hidden when overlay is open */}
+          {!isOpen && (
+            <button
+              className={`md:hidden cursor-pointer p-2 transition-colors duration-300 ${isSolid ? "text-foreground" : "text-white"}`}
+              onClick={() => setIsOpen(true)}
+              aria-label="Menü megnyitása"
+            >
+              <Menu size={24} />
+            </button>
+          )}
         </div>
 
-        {/* Mobile menu */}
-        <AnimatePresence>
-          {isOpen && (
+      </div>
+
+      {/* Mobile full-screen overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="mobile-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 z-50"
+          >
+            {/* Menu panel */}
             <motion.div
-              key="mobile-menu"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              ref={menuPanelRef}
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              className="md:hidden overflow-hidden"
+              className="relative bg-background/98 backdrop-blur-md shadow-md"
             >
-              <div className="pb-4 space-y-0 bg-[#ededed]/95 backdrop-blur-md rounded-b-lg">
+              {/* Header row */}
+              <div className="flex justify-between items-center h-16 px-4 sm:px-6">
+                <Link href="/" className="text-base" onClick={(e) => guardedClick(e, "/", () => setIsOpen(false))}>
+                  <LogoWave isSolid={true} />
+                </Link>
+                <button
+                  className="cursor-pointer p-2 text-foreground"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Menü bezárása"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Nav items */}
+              <div className="pb-4 space-y-0">
                 {navigationItems.map((item) => {
                   const isActive = item.href.startsWith("/#")
                     ? pathname === "/" && activeHash === item.href.slice(1)
@@ -155,13 +215,13 @@ export function Navigation() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`block px-3 py-2.5 text-base font-medium transition-colors ${
-                        isActive ? "text-[#3a3a3a]" : "text-[#4a4f4a]/70 hover:text-[#3a3a3a]"
+                      className={`block px-4 py-2.5 text-base font-medium transition-colors ${
+                        isActive ? "text-foreground" : "text-primary/70 hover:text-foreground"
                       }`}
-                      onClick={() => {
+                      onClick={(e) => guardedClick(e, item.href, () => {
                         if (item.href.startsWith("/#")) setActiveHash(item.href.slice(1))
                         setIsOpen(false)
-                      }}
+                      })}
                     >
                       <span className={`relative inline-block ${isActive ? "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-current" : ""}`}>
                         {item.label}
@@ -171,10 +231,8 @@ export function Navigation() {
                 })}
                 <Link
                   href="/booking"
-                  className={`block px-3 py-2.5 text-base font-medium transition-colors ${
-                    pathname === "/booking" ? "text-[#3a3a3a]" : "text-[#4a4f4a]/70 hover:text-[#3a3a3a]"
-                  }`}
-                  onClick={() => setIsOpen(false)}
+                  className={`block px-4 py-2.5 text-base font-bold transition-colors text-foreground`}
+                  onClick={(e) => guardedClick(e, "/booking", () => setIsOpen(false))}
                 >
                   <span className={`relative inline-block ${pathname === "/booking" ? "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-current" : ""}`}>
                     Időpontfoglalás
@@ -182,16 +240,17 @@ export function Navigation() {
                 </Link>
                 <Link
                   href="/admin"
-                  className="block px-3 py-2.5 text-sm text-[#4a4f4a]/40 hover:text-[#4a4f4a]/70 transition-colors"
-                  onClick={() => setIsOpen(false)}
+                  className="block px-4 py-2.5 text-sm text-primary/40 hover:text-primary/70 transition-colors"
+                  onClick={(e) => guardedClick(e, "/admin", () => setIsOpen(false))}
                 >
                   Admin
                 </Link>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   )
 }

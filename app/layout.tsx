@@ -1,17 +1,27 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Plus_Jakarta_Sans } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 import { ConditionalFooter } from "@/components/conditional-footer"
 import { PageTransition } from "@/components/ui/page-transition"
+import { UnsavedChangesProvider } from "@/contexts/unsaved-changes-context"
+import { CookieConsentProvider } from "@/contexts/cookie-consent-context"
+import { CookieBanner } from "@/components/cookie-banner"
+import { ConsentAwareAnalytics } from "@/components/consent-aware-analytics"
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
   weight: ["300", "400", "500", "600", "700", "800"],
+  style: ["normal"],
 })
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+}
 
 export const metadata: Metadata = {
   title: "Zalaegerszegi Nordmann Fenyők - Karácsonyfák",
@@ -32,13 +42,18 @@ export default function RootLayout({
   return (
     <html lang="hu" className={plusJakarta.variable}>
       <body className="font-sans antialiased flex flex-col min-h-screen">
-        <Navigation />
-        {/* pt-16 compensates for the fixed nav (h-16) so content on all pages isn't hidden underneath it */}
-        <main className="flex-1 pt-16">
-          <PageTransition>{children}</PageTransition>
-        </main>
-        <ConditionalFooter />
-        <Analytics />
+        <CookieConsentProvider>
+          <UnsavedChangesProvider>
+            <Navigation />
+            {/* pt-16 compensates for the fixed nav (h-16) so content on all pages isn't hidden underneath it */}
+            <main className="flex-1 pt-16">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <ConditionalFooter />
+          </UnsavedChangesProvider>
+          <CookieBanner />
+          <ConsentAwareAnalytics />
+        </CookieConsentProvider>
       </body>
     </html>
   )

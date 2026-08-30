@@ -60,7 +60,7 @@ export default function PreviewPage() {
             <p className="text-[10px] uppercase tracking-widest text-[#4a4f4a]/50 mb-3">Per word · blur preset</p>
             <TextEffect key={`word-${textKey}`} per="word" preset="blur" as="h2"
               className="text-4xl sm:text-5xl font-bold text-[#3a3a3a] tracking-tight leading-tight">
-              Karácsonyfa, ahogy kell.
+              KARÁCSONYFA, ZALAEGERSZEG HATÁRÁBAN
             </TextEffect>
           </div>
           <div>

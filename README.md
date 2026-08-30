@@ -1,10 +1,10 @@
-# 🎄 Christmas Tree Farm App
+﻿# 🎄 Christmas Tree Farm App
 
 A full-stack web application for managing Christmas tree farm operations, including customer reservations, tree inventory, expenses tracking, and admin authentication.
 
 *Automatically synced with your [v0.app](https://v0.app) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/tomihollosi-9631s-projects/v0-christmas-tree-farm-app)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/hollositamas-projects/v0-christmas-tree-farm-app)
 [![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/uLhcWiTTbMh)
 
 ## Overview
@@ -78,6 +78,12 @@ Required environment variables (set in Vercel):
 ```env
 AUTH_SECRET              # Secret key for session signing
 DATABASE_URL            # Neon PostgreSQL connection string
+RESEND_API_KEY          # API key from Resend
+RESERVATION_NOTIFY_TO   # Comma-separated internal recipients
+RESERVATION_EMAIL_FROM  # Verified sender, e.g. Foglalás <noreply@yourdomain.tld>
+CLOUDINARY_CLOUD_NAME   # Cloudinary cloud name for admin reservation photos
+CLOUDINARY_API_KEY      # Cloudinary API key
+CLOUDINARY_API_SECRET   # Cloudinary API secret
 ```
 
 ## Development
@@ -104,7 +110,7 @@ pnpm start
 
 Your project is live at:
 
-**[https://vercel.com/tomihollosi-9631s-projects/v0-christmas-tree-farm-app](https://vercel.com/tomihollosi-9631s-projects/v0-christmas-tree-farm-app)**
+**[https://vercel.com/hollositamas-projects/v0-christmas-tree-farm-app](https://vercel.com/hollositamas-projects/v0-christmas-tree-farm-app)**
 
 ### How It Works
 
@@ -115,29 +121,47 @@ Your project is live at:
 
 ## Database
 
-The app uses Neon PostgreSQL for data persistence. Key tables include:
+The app uses Neon PostgreSQL for data persistence. All operational data is partitioned by calendar year via a `year` column on `reservations`, `expenses`, and `settings`. The `years` table tracks which years exist and which one is currently *active* (the public booking page uses the active year's settings and stamps new public reservations with it).
 
-- `users` - Admin user accounts with hashed passwords
-- `reservations` - Customer reservations with status tracking
-- `expenses` - Farm expenses with categorization
+Key tables:
+
+- `years` - List of seasons with an `is_active` flag (only one active at a time)
+- `admin_users` - Admin accounts (`username`, `password_hash`)
+- `reservations` - Customer reservations, keyed by `year`
+- `expenses` - Farm expenses (`year`, `person`, `amount`, `description`, `date`)
+- `settings` - One row per year (available days, max bookings/day, retrieval days, price per tree)
 
 ## API Routes
 
 ### Admin Routes
-- `POST /api/admin/login` - Admin authentication
-- `GET /api/admin/reservations` - List all reservations
-- `GET /api/admin/reservations/[id]` - Get specific reservation
+- `POST /api/admin/login` - Admin authentication (body: `{ username, password }`)
+- `POST /api/admin/logout` - Clear session cookie
+- `GET /api/admin/reservations` - List reservations for the admin's view year (optional `?status=` filter)
+- `POST /api/admin/reservations/quick` - Admin quick-create reservation for the active year (treeCount required, other fields optional)
+- `GET /api/admin/reservations/[id]` - Get specific reservation (any year)
 - `PATCH /api/admin/reservations/[id]` - Update reservation with validation
 - `DELETE /api/admin/reservations/[id]` - Delete reservation
+- `GET /api/admin/expenses` / `POST /api/admin/expenses` - List/create expenses for the view year
+- `DELETE /api/admin/expenses/[id]` - Delete expense
+- `GET /api/admin/stats` - Dashboard totals for the view year
+- `GET /api/admin/settings` - Active-year settings (no auth) or `?year=X` for any year (admin only)
+- `PATCH /api/admin/settings` - Update settings for the view year
+- `GET /api/admin/years` - List all years with reservation/expense counts
+- `POST /api/admin/years` - Create a new year (clones settings from the most recent prior year)
+- `POST /api/admin/years/[year]/activate` - Promote a year to be the public-facing active year
+- `DELETE /api/admin/years/[year]` - Delete an empty, non-active year
+- `POST /api/admin/view-year` - Set the admin's view-year cookie
 
 ### Public Routes
-- `GET /api/reservations` - Get available dates and reservation counts
-- `POST /api/reservations` - Create new reservation
+- `POST /api/reservations` - Create new reservation, stamped with the active year (returns 503 if no year is active)
+
+### Bootstrap
+- `POST /api/seed-admin` - Create/update an admin user (requires `SEED_ADMIN_KEY` header `x-seed-key`)
 
 ## Security Notes
 
-- Admin passwords are hashed with bcrypt
-- Sessions are managed with HTTP-only cookies
-- Origin checks prevent CSRF attacks in production
-- All inputs are validated on client and server
+- Admin passwords are hashed with PBKDF2-SHA256 (100k iterations, per-user salt)
+- Sessions are stateless HS256 JWTs in HTTP-only cookies (`admin_session`, 8h)
+- Same-origin checks on mutating routes prevent CSRF in production
+- All inputs are validated on client and server (Zod on the server)
 - Database queries use parameterized statements

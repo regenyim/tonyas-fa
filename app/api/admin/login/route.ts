@@ -5,8 +5,8 @@ import { validateCredentials, createSession } from "@/lib/auth"
 import { enforceSameOrigin, logApiError, parseJsonBody } from "@/lib/api"
 
 const loginSchema = z.object({
-  username: z.string().trim().min(1).max(100),
-  password: z.string().min(1).max(200),
+  username: z.string().trim().min(1, "Felhasználónév szükséges.").max(100, "A felhasználónév legfeljebb 100 karakter lehet."),
+  password: z.string().min(1, "Jelszó szükséges.").max(200, "A jelszó legfeljebb 200 karakter lehet."),
 })
 
 export async function POST(request: Request) {

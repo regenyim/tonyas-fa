@@ -6,7 +6,7 @@ import { logApiError, parseJsonBody } from "@/lib/api"
 
 const seedSchema = z.object({
   username: z.string().trim().min(1).max(100).default("admin"),
-  password: z.string().min(12).max(200),
+  password: z.string().min(5).max(200),
 })
 
 export async function POST(req: Request) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     }
 
     if (req.headers.get("x-seed-key") !== process.env.SEED_ADMIN_KEY) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Nem engedélyezett" }, { status: 401 })
     }
 
     const parsedBody = await parseJsonBody(req, seedSchema)

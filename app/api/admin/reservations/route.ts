@@ -1,7 +1,8 @@
-﻿import "server-only"
+import "server-only"
 import { listReservations } from "@/lib/reservations"
 import { ReservationStatus } from "@/lib/types"
 import { logApiError, requireAdminSessionResponse } from "@/lib/api"
+import { getViewYear } from "@/lib/years"
 
 export async function GET(request: Request) {
   try {
@@ -18,12 +19,13 @@ export async function GET(request: Request) {
       return Response.json({ success: false, error: "Érvénytelen státusz szűrő" }, { status: 400 })
     }
 
-    const filters = status ? { status } : undefined
-    const reservations = await listReservations(filters)
+    const year = await getViewYear()
+    const reservations = await listReservations(status ? { year, status } : { year })
 
     return Response.json({
       success: true,
       reservations,
+      year,
     })
   } catch (error) {
     logApiError("admin reservations list failed", error)
@@ -36,4 +38,3 @@ export async function GET(request: Request) {
     )
   }
 }
-

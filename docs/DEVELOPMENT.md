@@ -68,8 +68,8 @@ v0-christmas-tree-farm-app/
 │   ├── types.ts                  # TypeScript types
 │   ├── api.ts                    # API helpers
 │   └── site.ts                   # Site configuration
-├── styles/
-│   └── globals.css               # Tailwind config & design tokens
+├── app/globals.css              # Tailwind v4 config & design tokens (imported by app/layout.tsx)
+├── styles/globals.css           # Legacy stylesheet (not imported by the app)
 └── docs/                         # Documentation
 ```
 
@@ -105,15 +105,20 @@ createdb christmas_tree_farm
 
 ### Initialize Database
 
-1. Create tables by running SQL scripts:
+1. Create tables via the Neon SQL editor or `psql`. The schema lives in [docs/DEPLOYMENT.md](DEPLOYMENT.md#required-tables) — `admin_users`, `reservations`, `expenses`, `settings`.
+
+2. Verify the connection:
    ```bash
-   # Tables should be created via Neon console or psql
+   pnpm exec tsx scripts/test-db-connection.ts
    ```
 
-2. Seed with test data (optional):
-   ```sql
-   INSERT INTO users (email, password_hash) VALUES 
-   ('admin@example.com', '$2b$10$...');
+3. Seed an admin user. Don't insert raw SQL — the app stores PBKDF2 hashes (`salt:hash`), not bcrypt. Use the seed endpoint:
+   ```bash
+   # Set SEED_ADMIN_KEY in .env.local first
+   curl -X POST http://localhost:3000/api/seed-admin \
+     -H "x-seed-key: $SEED_ADMIN_KEY" \
+     -H "content-type: application/json" \
+     -d '{"username":"admin","password":"at-least-12-chars"}'
    ```
 
 ## Development Workflows
@@ -136,17 +141,39 @@ createdb christmas_tree_farm
    app/api/admin/new-endpoint/route.ts
    ```
 
-2. Implement handler:
+2. Implement handler. Admin routes follow this pipeline (see existing routes in `app/api/admin/**`):
    ```typescript
-   import { jsonError, jsonResponse } from "@/lib/api"
-   
+   import "server-only"
+   import { z } from "zod"
+   import {
+     enforceSameOrigin,
+     parseJsonBody,
+     requireAdminSessionResponse,
+     logApiError,
+   } from "@/lib/api"
+
+   const schema = z.object({ /* ... */ })
+
    export async function POST(request: Request) {
-     // Validate request
-     // Execute logic
-     // Return response
-     return jsonResponse({ success: true, data: {...} })
+     try {
+       const originError = enforceSameOrigin(request)
+       if (originError) return originError
+
+       const authError = await requireAdminSessionResponse()
+       if (authError) return authError
+
+       const parsed = await parseJsonBody(request, schema)
+       if (!parsed.success) return parsed.response
+
+       // ...domain call against lib/* ...
+       return Response.json({ success: true, data: {} })
+     } catch (error) {
+       logApiError("my route failed", error)
+       return Response.json({ success: false, error: "Szerver hiba" }, { status: 500 })
+     }
    }
    ```
+   `lib/api.ts` exports `jsonError`, `jsonErrors`, `parseJsonBody`, `parseNumericId`, `requireAdminUser`, `requireAdminSessionResponse`, `enforceSameOrigin`, and `logApiError`. Success responses use `Response.json(...)` directly — there is no `jsonResponse` helper. User-facing error strings are in Hungarian.
 
 3. Test with curl or API client
 
@@ -185,13 +212,16 @@ createdb christmas_tree_farm
 
 ## Testing
 
+There is no automated test runner in this project — `pnpm test` is not defined. All testing is manual.
+
 ### Manual Testing Checklist
 
 Before committing code:
 
-- [ ] No TypeScript errors: `pnpm run build`
+- [ ] Lint passes: `pnpm lint`
+- [ ] Type check passes: `pnpm exec tsc --noEmit` (note: `pnpm build` ignores TS errors per `next.config.mjs`)
 - [ ] App renders without errors
-- [ ] Forms validate correctly
+- [ ] Forms validate correctly (client + server)
 - [ ] API endpoints return correct data
 - [ ] Database queries work
 - [ ] Mobile responsive (use DevTools)
@@ -330,11 +360,11 @@ pnpm run build
 ### Before Pushing
 
 ```bash
-# Check for errors
-pnpm run build
+# Check for type errors (pnpm build does NOT — see next.config.mjs)
+pnpm exec tsc --noEmit
 
-# Ensure tests pass
-pnpm test  # if configured
+# Lint
+pnpm lint
 
 # Review changes
 git diff

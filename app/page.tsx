@@ -11,6 +11,7 @@ import { AnimatedNumber } from "@/components/ui/animated-number"
 import { AnimatedList } from "@/components/ui/animated-list"
 import { Marquee3D } from "@/components/ui/marquee-3d"
 import MistBackground from "@/components/ui/mist-background"
+import { Glow } from "@/components/ui/glow"
 import { formatPrice } from "@/lib/utils"
 
 const treeVariants = [
@@ -155,9 +156,9 @@ export default function HomePage() {
               preset="blur"
               as="h1"
               delay={0.35}
-              className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[0.95] tracking-tight mb-6 max-w-2xl"
+              className="text-[clamp(1.75rem,8vw,3rem)] sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6 max-w-2xl"
             >
-              Karácsonyfa, ahogy kell.
+              KARÁCSONYFA, ZALAEGERSZEG HATÁRÁBAN
             </TextEffect>
             <p
               className="text-base sm:text-lg text-white/60 font-light mb-8 max-w-sm"
@@ -196,66 +197,68 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Us Section */}
-      <section className="relative min-h-screen flex items-center bg-[#6e7f6a]/15 overflow-hidden">
-        <SpotlightEffect fill="#6e7f6a" className="opacity-30" />
+      <section className="relative min-h-screen flex items-center overflow-hidden bg-section-alt">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16">
           <AnimateOnScroll>
-            <div className="section-label justify-center">Miért minket?</div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#3a3a3a] mb-8 tracking-tight text-center">A mi különlegességünk</h2>
+            <div className="section-label justify-center">Miért válassz minket</div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 tracking-tight text-center">A mi különlegességünk</h2>
           </AnimateOnScroll>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {cards.map((card, i) => (
               <AnimateOnScroll key={card.title} delay={i * 100}>
-                <SpotlightCard className="bg-[#f5f4f1] border border-[#bfc3c7] rounded-lg p-6 h-full">
+                <SpotlightCard
+                  className="bg-surface border border-border rounded-lg p-6 h-full [box-shadow:var(--shadow-card)]"
+                >
                   <div className="flex items-center mb-2">
-                    <p className="text-xs font-bold text-[#6e7f6a] tracking-widest w-8 flex-shrink-0">{card.number}</p>
-                    <h3 className="flex-1 font-semibold text-base tracking-tight text-[#3a3a3a] text-center">{card.title}</h3>
+                    <p className="text-xs font-bold text-secondary tracking-widest w-8 flex-shrink-0">{card.number}</p>
+                    <h3 className="flex-1 font-semibold text-base tracking-tight text-foreground text-center">{card.title}</h3>
                     <div className="w-8 flex-shrink-0" />
                   </div>
-                  <p className="text-sm text-[#4a4f4a] font-light leading-relaxed text-center">{card.body}</p>
+                  <p className="text-sm text-primary font-light leading-relaxed text-center">{card.body}</p>
                 </SpotlightCard>
               </AnimateOnScroll>
             ))}
           </div>
         </div>
+        {/* Transition → Fenyőink */}
+        <div aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }} />
       </section>
 
       {/* Nordmann Fenyőink Section */}
-      <section id="fenyoink" className="min-h-screen flex items-center bg-[#ededed] scroll-mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16">
+      <section id="fenyoink" className="relative lg:min-h-screen flex items-center bg-background scroll-mt-16">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
             {/* Left — text */}
             <AnimateOnScroll>
               <div className="flex flex-col text-center lg:text-left items-center lg:items-start">
-                <div className="section-label">Kínálatunk</div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-[#3a3a3a] mb-6 tracking-tight leading-tight">
+                <div className="section-label justify-center w-full">Kínálatunk</div>
+                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-6 tracking-tight leading-tight">
                   Nordmann fenyőink
                 </h2>
-                <div className="section-label mb-2">A fajta</div>
-                <h3 className="text-xl font-semibold text-[#3a3a3a] mb-3 tracking-tight">Miért Nordmann?</h3>
-                <p className="text-[#4a4f4a] font-light mb-3">
+                <h3 className="text-xl font-semibold text-foreground mb-3 tracking-tight">Miért Nordmann?</h3>
+                <p className="text-primary font-light mb-3 text-pretty">
                   Nem hullik a tűje. Ez az egyetlen komoly különbség, ami számít, ha otthon szeretnéd tartani az ünnep után is.
                 </p>
-                <p className="text-[#4a4f4a] font-light mb-3">
+                <p className="text-primary font-light mb-3 text-pretty">
                   Dús forma, erős ágak — a nehezebb díszeket is elbírja. Gyerekbarát, nincs szúrós tűlevele.
                 </p>
-                <p className="text-[#4a4f4a] font-light mb-8">
+                <p className="text-primary font-light mb-8 text-pretty">
                   Frissen vágva adjuk át. Nem hetekkel korábban vágott, ponyva alatt tárolt fa.
                 </p>
-                <div className="border border-[#bfc3c7] rounded-lg px-6 py-5 w-full text-center">
-                  <p className="text-xs font-bold text-[#4a4f4a]/40 tracking-widest mb-1 uppercase">Egységes ár</p>
-                  <p className="text-3xl font-extrabold text-[#3a3a3a] tracking-tight">
-                    <AnimatedNumber value={pricePerTree} suffix=" Ft" springOptions={{ stiffness: 50, damping: 18 }} />
+                <div className="border border-border rounded-lg px-6 py-5 w-full text-center [box-shadow:var(--shadow-card)]">
+                  <p className="text-xs font-bold text-primary/40 tracking-widest mb-1 uppercase">Egységes ár</p>
+                  <p className="text-3xl font-extrabold text-foreground tracking-tight">
+                    <AnimatedNumber value={pricePerTree} from={7000} suffix=" Ft" springOptions={{ stiffness: 75, damping: 27 }} />
                   </p>
-                  <p className="text-sm text-[#4a4f4a] font-light mt-1">Mérettől függetlenül.</p>
+                  <p className="text-sm text-primary font-light mt-1">Mérettől függetlenül.</p>
                 </div>
               </div>
             </AnimateOnScroll>
 
             {/* Right — image */}
             <AnimateOnScroll delay={200}>
-              <div className="bg-[#6e7f6a]/20 rounded-lg aspect-square overflow-hidden">
+              <div className="bg-secondary/20 rounded-lg aspect-square overflow-hidden [box-shadow:0_8px_32px_rgba(10,20,10,0.18),0_2px_8px_rgba(10,20,10,0.10)]">
                 <img
                   src="/fa.jpeg"
                   alt="Nordmann fa közelről"
@@ -265,15 +268,17 @@ export default function HomePage() {
             </AnimateOnScroll>
           </div>
         </div>
+        {/* Transition → Tree sizes */}
+        <div aria-hidden="true" className="absolute z-0 bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, var(--surface))" }} />
       </section>
 
       {/* Tree Size Variants Section */}
-      <section className="min-h-screen flex items-center bg-[#f5f4f1]">
+      <section className="relative lg:min-h-screen flex items-center bg-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left — image */}
             <AnimateOnScroll className="hidden lg:block">
-              <div className="rounded-xl overflow-hidden aspect-[3/4] w-full max-h-[500px]">
+              <div className="rounded-xl overflow-hidden aspect-[3/4] w-full max-h-[500px] [box-shadow:0_8px_32px_rgba(10,20,10,0.18),0_2px_8px_rgba(10,20,10,0.10)]">
                 <img src="/vasar.png" alt="Nordmann fenyő vásár" className="w-full h-full object-cover" />
               </div>
             </AnimateOnScroll>
@@ -283,18 +288,18 @@ export default function HomePage() {
               <AnimateOnScroll>
                 <div className="text-center">
                   <div className="section-label justify-center">Méretek</div>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-[#3a3a3a] mb-8 tracking-tight">Mekkora fát keresel?</h2>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8 tracking-tight">Mekkora fát keresel?</h2>
                 </div>
               </AnimateOnScroll>
               <div className="flex flex-col gap-4">
                 {treeVariants.map((variant, i) => (
                   <AnimateOnScroll key={variant.number} delay={i * 100}>
-                    <SpotlightCard className="bg-white border border-[#bfc3c7] rounded-lg p-5 h-full">
+                    <SpotlightCard className="bg-white border border-border rounded-lg p-5 h-full [box-shadow:var(--shadow-card)]">
                       <div className="flex items-center gap-4">
-                        <p className="text-xs font-bold text-[#6e7f6a]/60 tracking-widest w-6 flex-shrink-0">{variant.number}</p>
+                        <p className="text-xs font-bold text-secondary/60 tracking-widest w-6 flex-shrink-0">{variant.number}</p>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-base tracking-tight text-[#3a3a3a]">{variant.size} <span className="text-sm font-light text-[#4a4f4a]/60 ml-1">{variant.height}</span></h3>
-                          <p className="text-sm text-[#4a4f4a] font-light leading-relaxed">{variant.description}</p>
+                          <h3 className="font-semibold text-base tracking-tight text-foreground">{variant.size} <span className="text-sm font-light text-primary/60 ml-1">{variant.height}</span></h3>
+                          <p className="text-sm text-primary font-light leading-relaxed">{variant.description}</p>
                         </div>
                       </div>
                     </SpotlightCard>
@@ -310,12 +315,12 @@ export default function HomePage() {
       <div aria-hidden="true" className="bg-primary overflow-hidden">
         <Marquee3D
           items={["Nordmann", "Zalaegerszeg", `${formatPrice(pricePerTree)}`, "Csak Nordmann fenyő", "Időpontfoglalás", "Frissen vágva"]}
-          speed={22}
+          speed={60}
         />
       </div>
 
       {/* Hogyan Működik Section */}
-      <section id="hogyan-mukodik" className="min-h-screen flex items-center bg-[#6e7f6a]/15 scroll-mt-16">
+      <section id="hogyan-mukodik" className="relative min-h-screen flex items-center bg-section-alt scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
@@ -323,24 +328,24 @@ export default function HomePage() {
             <AnimateOnScroll>
               <div className="flex flex-col items-center text-center">
                 <div className="section-label justify-center">A vásárlás folyamata</div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-[#3a3a3a] mb-4 tracking-tight leading-tight">
+                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight leading-tight">
                   Hogyan működünk?
                 </h2>
-                <p className="text-[#4a4f4a] font-light mb-8 max-w-xs">
+                <p className="text-primary font-light mb-8 max-w-xs">
                   Az online foglalástól az átvételig öt lépés.
                 </p>
-                <div className="w-full mb-8">
+                <div className="w-full mb-8 border border-border rounded-lg px-4 bg-white/60 [box-shadow:var(--shadow-card)]">
                   <AnimatedList
                     staggerDelay={0.1}
-                    itemClassName="border-b border-[#bfc3c7] last:border-b-0"
+                    itemClassName="border-b border-border last:border-b-0"
                     items={steps.map((step, index) => (
                       <div key={step.number} className="flex gap-5 items-start py-4 text-left">
-                        <span className="text-xs font-bold text-[#4a4f4a]/40 w-6 flex-shrink-0 mt-1 tabular-nums">
+                        <span className="text-xs font-bold text-primary/40 w-6 flex-shrink-0 mt-1 tabular-nums">
                           {step.number}
                         </span>
                         <div>
-                          <h3 className="text-sm font-semibold text-[#3a3a3a] mb-0.5 tracking-tight">{step.title}</h3>
-                          <p className="text-sm text-[#4a4f4a] font-light leading-relaxed">{step.description}</p>
+                          <h3 className="text-sm font-semibold text-foreground mb-0.5 tracking-tight">{step.title}</h3>
+                          <p className="text-sm text-primary font-light leading-relaxed">{step.description}</p>
                         </div>
                       </div>
                     ))}
@@ -356,7 +361,7 @@ export default function HomePage() {
 
             {/* Right — image */}
             <AnimateOnScroll delay={200} className="hidden lg:block">
-              <div className="rounded-xl overflow-hidden w-3/4 mx-auto aspect-[3/4]">
+              <div className="rounded-xl overflow-hidden w-3/4 mx-auto aspect-[3/4] [box-shadow:0_8px_32px_rgba(10,20,10,0.18),0_2px_8px_rgba(10,20,10,0.10)]">
                 <img src="/sorszam.png" alt="Sorszámozott fenyő" className="w-full h-full object-cover" />
               </div>
             </AnimateOnScroll>

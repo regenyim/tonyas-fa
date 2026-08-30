@@ -5,9 +5,10 @@ import { useRef } from "react"
 interface SpotlightCardProps {
   children: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
-export function SpotlightCard({ children, className }: SpotlightCardProps) {
+export function SpotlightCard({ children, className, style }: SpotlightCardProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -22,6 +23,7 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
       ref={ref}
       onMouseMove={handleMouseMove}
       className={`spotlight-card ${className ?? ""}`}
+      style={style}
     >
       {children}
     </div>
